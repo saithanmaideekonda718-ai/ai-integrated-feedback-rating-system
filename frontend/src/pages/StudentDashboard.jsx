@@ -12,7 +12,8 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const currentUser = localStorage.getItem('currentUser') || 'anonymous';
+  const user = JSON.parse(localStorage.getItem('user'));
+  const currentUser = user?.username || 'anonymous';
   const [selectedBranch, setSelectedBranch] = useState(localStorage.getItem(`studentBranch_${currentUser}`) || '');
   const [selectedYear, setSelectedYear] = useState(localStorage.getItem(`studentYear_${currentUser}`) || '');
   const [selectedSemester, setSelectedSemester] = useState(localStorage.getItem(`studentSemester_${currentUser}`) || '');
@@ -26,14 +27,16 @@ const StudentDashboard = () => {
   }, [selectedBranch, selectedYear, selectedSemester, currentUser]);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem('currentUser') || 'anonymous';
-    const storageKey = `completedFeedbacks_${currentUser}`;
-    const completedStr = localStorage.getItem(storageKey);
-    if (completedStr) {
-      setCompletedCourses(JSON.parse(completedStr));
-    }
-  }, []);
+  const user = JSON.parse(localStorage.getItem('user'));
+  const currentUser = user?.username || 'anonymous';
 
+  const storageKey = `completedFeedbacks_${currentUser}`;
+  const completedStr = localStorage.getItem(storageKey);
+
+  if (completedStr) {
+    setCompletedCourses(JSON.parse(completedStr));
+  }
+}, []);
   useEffect(() => {
     const fetchCourses = async () => {
       try {

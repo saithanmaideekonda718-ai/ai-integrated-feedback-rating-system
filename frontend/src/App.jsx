@@ -5,6 +5,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import FeedbackForm from './pages/FeedbackForm';
 import AdminDashboard from './pages/AdminDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
+import FacultyFeedback from './pages/FacultyFeedback';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Route path="/admin/reports" element={<AdminDashboard />} />
       <Route path="/faculty" element={<FacultyDashboard />} />
       <Route path="/faculty/add" element={<FacultyDashboard />} />
+      <Route path="/faculty/feedback/:courseId" element={<FacultyFeedback />} />
     </Routes>
   );
 }

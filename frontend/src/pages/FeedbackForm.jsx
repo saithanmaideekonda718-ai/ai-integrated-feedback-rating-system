@@ -20,6 +20,8 @@ const FeedbackForm = () => {
       alert("Please select a rating.");
       return;
     }
+    const user = JSON.parse(localStorage.getItem('user'));
+    const currentUser = user?.username || 'anonymous';
 
     try {
       const res = await fetch('http://localhost:5000/api/feedback', {
@@ -30,16 +32,17 @@ const FeedbackForm = () => {
         body: JSON.stringify({
           courseId,
           rating,
-          comments
+          comments,
+          username: currentUser
         })
       });
 
       if (!res.ok) {
-        throw new Error('Failed to submit feedback');
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to submit feedback');
       }
 
       // Track locally so dashboard can show tick mark
-      const currentUser = localStorage.getItem('currentUser') || 'anonymous';
       const storageKey = `completedFeedbacks_${currentUser}`;
       const completedStr = localStorage.getItem(storageKey);
       const completed = completedStr ? JSON.parse(completedStr) : [];

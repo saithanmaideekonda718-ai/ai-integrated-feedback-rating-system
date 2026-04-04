@@ -19,6 +19,14 @@ const feedbackSchema = new mongoose.Schema({
   sentiment: { 
     type: Number, // Calculated score from 0-100 indicating positive/negative tone
     default: 80 
+  },
+  anonymousId: {
+    type: String,
+    required: true
+  },
+  student: {
+    type: String, // store username
+    required: true
   }
 }, { timestamps: true });
 

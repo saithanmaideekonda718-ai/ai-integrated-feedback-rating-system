@@ -47,7 +47,12 @@ const Login = () => {
         setIsLogin(true);
         setErrorMsg('Registered successfully! Please login now.');
       } else {
-        localStorage.setItem('currentUser', username);
+        const nameFromEmail = username.split('@')[0];
+
+        localStorage.setItem('user', JSON.stringify({
+        username: nameFromEmail,
+        role: role
+      }));
         if (role === 'admin') navigate('/admin');
         else if (role === 'faculty') navigate('/faculty');
         else navigate('/student');

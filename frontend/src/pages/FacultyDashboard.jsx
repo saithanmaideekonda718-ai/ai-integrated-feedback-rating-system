@@ -4,6 +4,8 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { BookOpen, PlusCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import './Pages.css';
+import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const FacultyDashboard = () => {
   const [courseName, setCourseName] = useState('');
@@ -16,8 +18,15 @@ const FacultyDashboard = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [feedbackData, setFeedbackData] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const navigate = useNavigate();
+
   // Temporarily hardcoded for the current session since login does not persist faculty names
-  const loggedInFaculty = 'Dr. Smith';
+  const user = JSON.parse(localStorage.getItem('user'));
+  const loggedInFaculty = user?.username || 'Unknown';
+
+  const [chartData, setChartData] = useState([]);
 
   const fetchSubjects = async () => {
     try {
@@ -33,10 +42,24 @@ const FacultyDashboard = () => {
       setIsLoading(false);
     }
   };
+  const fetchChartData = async () => {
+  try {
+    const res = await fetch('http://localhost:5000/api/feedback/admin-metrics');
+    const data = await res.json();
+
+    setChartData(data);
+    calculateStats(data); 
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   useEffect(() => {
     fetchSubjects();
-  }, []);
+    fetchChartData();
+  }, [loggedInFaculty]);
+
+  
 
   const handleAddSubject = async (e) => {
     e.preventDefault();
@@ -90,6 +113,34 @@ const FacultyDashboard = () => {
     }
   };
 
+  const [stats, setStats] = useState({
+  total: 0,
+  highest: '',
+  lowest: ''
+});
+
+const calculateStats = (data) => {
+  if (!data.length) return;
+
+  let total = 0;
+  let highest = data[0];
+  let lowest = data[0];
+
+  data.forEach(d => {
+    total += d.count;
+
+    if (d.rating > highest.rating) highest = d;
+    if (d.rating < lowest.rating) lowest = d;
+  });
+
+  setStats({
+    total,
+    highest: `${highest.course} (${highest.rating})`,
+    lowest: `${lowest.course} (${lowest.rating})`
+  });
+};
+
+
   return (
     <DashboardLayout role="faculty">
       <div className="dashboard-header mb-6 animate-slide-up">
@@ -98,8 +149,49 @@ const FacultyDashboard = () => {
         {errorMsg && <div style={{ color: 'var(--danger)', marginTop: '10px' }}>{errorMsg}</div>}
       </div>
 
-      <div className="dashboard-content-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+      <div className="dashboard-content-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
         
+
+        <Card className="glass animate-slide-up" style={{ marginBottom: '20px' }}>
+  <h3>Quick Insights</h3>
+
+  <div style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '20px',
+    marginTop: '15px'
+  }}>
+    
+    <div style={{ padding: '15px', background: '#eef2ff', borderRadius: '10px' }}>
+      <p>Total Feedback</p>
+      <h2>{stats.total}</h2>
+    </div>
+
+    <div style={{ padding: '15px', background: '#dcfce7', borderRadius: '10px' }}>
+      <p>Top Course</p>
+      <h3>{stats.highest}</h3>
+    </div>
+
+    <div style={{ padding: '15px', background: '#fee2e2', borderRadius: '10px' }}>
+      <p>Needs Improvement</p>
+      <h3>{stats.lowest}</h3>
+    </div>
+
+  </div>
+</Card>
+
+<Card className="glass animate-slide-up" style={{ marginBottom: '20px' }}>
+  <h3>Course-wise Rating</h3>
+
+  <ResponsiveContainer width="100%" height={300}>
+    <BarChart data={chartData}>
+      <XAxis dataKey="course" />
+      <YAxis domain={[0, 5]} />
+      <Tooltip />
+      <Bar dataKey="rating" fill="#6366f1" />
+    </BarChart>
+  </ResponsiveContainer>
+</Card>
         {/* Form to add subject */}
         <Card className="form-card glass animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <h3 className="card-title mb-6 flex items-center gap-2">
@@ -194,13 +286,20 @@ const FacultyDashboard = () => {
                         <span className="badge badge-positive" style={{ marginRight: '0.25rem' }}>{sub.branch}</span>
                         <span className="text-muted" style={{ fontSize: '0.8rem' }}>Y{sub.year} S{sub.semester}</span>
                       </td>
-                      <td>
+                      <td style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => navigate(`/faculty/feedback/${sub._id}`, { state: { name: sub.name } })}
+                          style={{ background: '#6366f1', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '5px', cursor: 'pointer' }}
+                        >
+                        View
+                        </button>
+
                         <button 
                           onClick={() => handleRemoveSubject(sub._id, sub.name)}
                           className="danger-action"
                           title="Remove subject"
                         >
-                          <Trash2 size={16} />
+                        <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -215,6 +314,42 @@ const FacultyDashboard = () => {
           </div>
         </Card>
 
+  {feedbackData.length > 0 && (
+  <Card className="glass animate-slide-up" style={{ marginTop: '20px' }}>
+    <h3 className="card-title mb-4">
+      Feedback for {selectedCourse}
+    </h3>
+
+    <p style={{ marginBottom: '10px' }}>
+  Average Rating: {
+    feedbackData.length > 0
+      ? (feedbackData.reduce((sum, f) => sum + f.rating, 0) / feedbackData.length).toFixed(1)
+      : 0
+  }
+</p>
+
+    <table className="feedback-table">
+      <thead>
+        <tr>
+          <th>Anonymous ID</th>
+          <th>Rating</th>
+          <th>Comments</th>
+          <th>Sentiment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {feedbackData.map((f, i) => (
+          <tr key={i}>
+            <td>{f.anonymousId}</td>
+            <td>{f.rating}</td>
+            <td>{f.comments}</td>
+            <td>{f.sentiment}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </Card>
+)}
       </div>
     </DashboardLayout>
   );
